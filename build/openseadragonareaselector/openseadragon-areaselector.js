@@ -1,3 +1,6 @@
+//! OpenSeadragonAreaSelector 0.1.0
+//! Build date: 2015-04-03
+//! https://github.com/jedateach/OpenSeadragonAreaSelector
 (function( $ ){
 
 $.AreaSelector = function( options ) {

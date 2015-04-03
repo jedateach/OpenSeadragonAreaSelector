@@ -13,7 +13,7 @@ This plugin should provide equivelant functionality to jQuery UI's `draggable` a
  * Create + attach an area selector to a viewer.
  * Init location + size
  * Click/press and drag to move the area selector.
- * Click/press and drag corners / edges to resize.
+ * Click/press and drag handles (corners / edges) to resize.
  * Constrain position+size to the maximum bounds of image, or possibly a user-defined area.
  
 

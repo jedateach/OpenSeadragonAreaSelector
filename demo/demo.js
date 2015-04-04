@@ -4,7 +4,7 @@
 
 	var vieweroptions = {
 		id: "osdcontainer",
-		prefixUrl: "../../lib/openseadragon/build/openseadragon/images/",
+		prefixUrl: "https://openseadragon.github.io/openseadragon/images/",
 		tileSources: [
 			//"https://openseadragon.github.io/example-images/duomo/duomo.dzi"
 			"https://openseadragon.github.io/example-images/highsmith/highsmith.dzi"

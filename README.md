@@ -2,6 +2,11 @@
 
 This OpenSeaDragon plugin introduces a new feature for selecting, moving and resizing areas within the viewer.
 
+## Usage
+
+```javascript
+viewer.activateAreaSelector();
+```
 
 ## Feature / Architecture Planning
 

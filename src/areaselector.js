@@ -2,6 +2,7 @@
 
 $.AreaSelector = function( options ) {
 
+	//TODO: implement proper options setting
 	this.options = options || {};
 
     if (!options.viewer) {
@@ -13,7 +14,8 @@ $.AreaSelector = function( options ) {
 
 	_createResizeHandles(this);
 
-	this.rect = new $.Rect(0.5, 0.5, 0.1, 0.1);
+	//TODO: allow setting start size
+	this.rect = new $.Rect(0.45, 0.45, 0.1, 0.1);
 
 	this.viewer.addOverlay(
 		this.element,
@@ -24,33 +26,33 @@ $.AreaSelector = function( options ) {
 	this.mouseTracker = new $.MouseTracker({
 		element: this.element,
 		pressHandler: $.delegate(this, this.pressHandler),
-		releaseHandler: $.delegate(this, this.releaseHandler),
-		dragHandler: $.delegate(this, this.dragHandler)
+		dragHandler: $.delegate(this, this.dragHandler),
+		dragEndHandler: $.delegate(this, this.dragEndHandler)
 	});
 
 	this.gridSize = 0.1;
 
+	this.boundary = this.options.boundary || this.viewer.viewport.getBounds();
 };
 
 $.AreaSelector.prototype = {
 
 	pressHandler: function(event) {
-		this.dragging = true;
-
-		this.dragOrigin = event.position.clone();
 		this.rectOrigin = this.rect.getTopLeft();
+		this.dragStartPoint = this.viewer.viewport.pointFromPixel(event.position);
 	},
 
 	dragHandler: function(event) {
-		var offset = event.position.minus(this.dragOrigin);
-		offset = this.viewer.viewport.deltaPointsFromPixels(offset);
+		var dragCurPoint = this.viewer.viewport.pointFromPixel(event.position);
+		var dragDiff = dragCurPoint.minus(this.dragStartPoint);
+		var newRectPoint = this.rectOrigin.plus(dragDiff);
 
-		this.rect.x = this.rectOrigin.x + offset.x;
-		this.rect.y = this.rectOrigin.y + offset.y;
+		this.rect.x = newRectPoint.x;
+		this.rect.y = newRectPoint.y;
+
+		this.respectBoundary();
 
 		//this.snapToGrid();
-
-		//TODO: this.respectViewport();
 
 		//update position
 		this.viewer.updateOverlay(
@@ -60,8 +62,7 @@ $.AreaSelector.prototype = {
 		);
 	},
 
-	releaseHandler: function() {
-		this.dragging = false;
+	dragEndHandler: function() {
 		//enable zooming and other viewer controls?
 	},
 
@@ -69,6 +70,26 @@ $.AreaSelector.prototype = {
 		//TODO: allow custom grid width/height
 		this.rect.x = Math.floor(this.rect.x * 10) / 10;
 		this.rect.y = Math.floor(this.rect.y * 10) / 10;
+	},
+
+	/**
+	 * Constrains the area selector to the boundary defined in options.
+	 */
+	respectBoundary: function() {
+		if(!this.boundary){
+			return;
+		}
+		var b = this.boundary;
+		if(this.rect.x < b.x){
+			this.rect.x = b.x;
+		}else if(this.rect.x + this.rect.width > b.x + b.width){
+			this.rect.x = b.x + b.width - this.rect.width;
+		}
+		if(this.rect.y < b.y){
+			this.rect.y = b.y;
+		}else if(this.rect.y + this.rect.height > b.y + b.height){
+			this.rect.y = b.y + b.height - this.rect.height;
+		}
 	}
 
 };
@@ -80,11 +101,11 @@ function _createAreaSelectorElement(){
 	var el = document.createElement("div");
 	el.className = "openseadragon-areaselector";
 
-	el.style.borderWidth = "2px";
-	el.style.borderStyle = "dashed";
-	el.style.borderColor = "red";
 	el.style.cursor = "move";
 	el.style.position = "relative";
+
+	//TODO: allow customising style
+	el.style.border = "2px dashed #2CFC0E";
 
 	return el;
 }
@@ -97,16 +118,19 @@ function _createResizeHandles(areaselector) {
 
 	areaselector.handles = areaselector.heandles || {};
 
+	var offset = "-7px";
+	var size = "10px";
+
 	//handle locations and sizes
 	var hlocs = {
-		"n": {w:"100%", h:"10px", t:"-2px", l:"-2px", c:"ns"},
-		"e": {w:"10px", h:"100%", t:"-2px", r:"-2px", c:"ew"},
-		"s": {w:"100%", h:"10px", b:"-2px", l:"-2px", c:"ns"},
-		"w": {w:"10px", h:"100%", t:"-2px", l:"-2px", c:"ew"},
-		"se": {w:"10px", h:"10px", b:"-2px", r:"-2px", c:"nwse"},
-		"sw": {w:"10px", h:"10px", b:"-2px", l:"-2px", c:"nesw"},
-		"ne": {w:"10px", h:"10px", t:"-2px", r:"-2px", c:"nesw"},
-		"nw": {w:"10px", h:"10px", t:"-2px", l:"-2px", c:"nwse"}
+		"n": {w:size, h:size, t:offset, l:"50%", c:"ns"},
+		"e": {w:size, h:size, t:"50%", r:offset, c:"ew"},
+		"s": {w:size, h:size, b:offset, r:"50%", c:"ns"},
+		"w": {w:size, h:size, b:"50%", l:offset, c:"ew"},
+		"se": {w:size, h:size, b:offset, r:offset, c:"nwse"},
+		"sw": {w:size, h:size, b:offset, l:offset, c:"nesw"},
+		"ne": {w:size, h:size, t:offset, r:offset, c:"nesw"},
+		"nw": {w:size, h:size, t:offset, l:offset, c:"nwse"}
 	};
 
 	for(var l in hlocs){
@@ -130,9 +154,9 @@ function _createResizeHandles(areaselector) {
 		}
 		el.style.cursor = hlocs[l].c+"-resize";
 
-		//visual style
-		el.style.backgroundColor = "white";
-		el.style.border = "1px solid grey";
+		//TODO: allow customising style
+		el.style.backgroundColor = "#2CFC0E";
+		el.style.borderRadius = "50%";
 		
 		areaselector.element.appendChild(el);
 	}

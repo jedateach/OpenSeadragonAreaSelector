@@ -38,17 +38,16 @@ $.AreaSelector = function( options ) {
 $.AreaSelector.prototype = {
 
 	pressHandler: function(event) {
-		this.rectOrigin = this.rect.getTopLeft();
-		this.dragStartPoint = this.viewer.viewport.pointFromPixel(event.position);
+		this.dragStartOffset = this.viewer.viewport.deltaPointsFromPixels(event.position);
 	},
 
 	dragHandler: function(event) {
-		var dragCurPoint = this.viewer.viewport.pointFromPixel(event.position);
-		var dragDiff = dragCurPoint.minus(this.dragStartPoint);
-		var newRectPoint = this.rectOrigin.plus(dragDiff);
+		var dragPos = this.viewer.viewport.pointFromPixel(
+			new $.Point(event.originalEvent.x,event.originalEvent.y)
+		);
 
-		this.rect.x = newRectPoint.x;
-		this.rect.y = newRectPoint.y;
+		this.rect.x = dragPos.x - this.dragStartOffset.x;
+		this.rect.y = dragPos.y - this.dragStartOffset.y;
 
 		this.respectBoundary();
 
@@ -58,7 +57,7 @@ $.AreaSelector.prototype = {
 		this.viewer.updateOverlay(
 			this.element,
 			this.rect,
-			$.OverlayPlacement.CENTER
+			$.OverlayPlacement.TOP_LEFT
 		);
 	},
 

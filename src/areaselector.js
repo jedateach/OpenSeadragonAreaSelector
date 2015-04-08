@@ -23,12 +23,9 @@ $.AreaSelector = function( options ) {
 		$.OverlayPlacement.CENTER
 	);
 
-	this.mouseTracker = new $.MouseTracker({
-		element: this.element,
-		pressHandler: $.delegate(this, this.pressHandler),
-		dragHandler: $.delegate(this, this.dragHandler),
-		dragEndHandler: $.delegate(this, this.dragEndHandler)
-	});
+	this.viewer.addHandler('canvas-press', $.delegate(this, this.pressHandler));
+	this.viewer.addHandler('canvas-drag', $.delegate(this, this.dragHandler));
+	this.viewer.addHandler('canvas-drag-end', $.delegate(this, this.dragEndHandler));
 
 	this.gridSize = 0.1;
 
@@ -38,12 +35,23 @@ $.AreaSelector = function( options ) {
 $.AreaSelector.prototype = {
 
 	pressHandler: function(event) {
-		this.dragStartOffset = this.viewer.viewport.deltaPointsFromPixels(event.position);
+		this.dragStart = this.viewer.viewport.pointFromPixel(event.position);
+		if(_insideRect(this.dragStart, this.rect)){
+			this.dragging = true;
+			this.panVerticalOriginal = this.viewer.panVertical;
+			this.panHorizontalOriginal = this.viewer.panHorizontal;
+			this.viewer.panVertical = false;
+			this.viewer.panHorizontal = false;
+			this.viewer.gestureSettingsTouch.flickEnabled = false;
+			this.dragStartOffset = this.dragStart.minus(this.rect.getTopLeft());
+		}
 	},
 
 	dragHandler: function(event) {
+		if(!this.dragging) return;
+
 		var dragPos = this.viewer.viewport.pointFromPixel(
-			new $.Point(event.originalEvent.x,event.originalEvent.y)
+			new $.Point(event.position.x,event.position.y)
 		);
 
 		this.rect.x = dragPos.x - this.dragStartOffset.x;
@@ -62,7 +70,12 @@ $.AreaSelector.prototype = {
 	},
 
 	dragEndHandler: function() {
-		//enable zooming and other viewer controls?
+		if(!this.dragging) return;
+		
+		this.dragging = false;
+		this.viewer.panVertical = this.panVerticalOriginal;
+		this.viewer.panHorizontal = this.panHorizontalOriginal;
+		this.viewer.gestureSettingsTouch.flickEnabled = true;
 	},
 
 	snapToGrid: function() {
@@ -92,6 +105,14 @@ $.AreaSelector.prototype = {
 	}
 
 };
+
+/**
+* Is a point inside a rectangle
+*/
+function _insideRect(point, rect) {
+  return (point.x >= rect.x && point.x < rect.x + rect.width &&
+		point.y >= rect.y && point.y < rect.y + rect.height);
+}
 
 /**
  * Create area selector dom element

@@ -35,6 +35,7 @@ $.AreaSelector = function( options ) {
 $.AreaSelector.prototype = {
 
 	pressHandler: function(event) {
+		if(this.dragging) return;
 		this.dragStart = this.viewer.viewport.pointFromPixel(event.position);
 		if(_insideRect(this.dragStart, this.rect)){
 			this.dragging = true;

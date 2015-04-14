@@ -10,9 +10,8 @@ $.AreaSelector = function( options ) {
     }
 	this.viewer = options.viewer;
 
-	this.element = _createAreaSelectorElement();
-
-	_createResizeHandles(this);
+	this._createAreaSelectorElement();
+	this._createResizeHandles();
 
 	//TODO: allow setting start size
 	this.rect = new $.Rect(0.45, 0.45, 0.1, 0.1);
@@ -27,39 +26,136 @@ $.AreaSelector = function( options ) {
 	this.viewer.addHandler('canvas-drag', $.delegate(this, this.dragHandler));
 	this.viewer.addHandler('canvas-drag-end', $.delegate(this, this.dragEndHandler));
 
-	this.gridSize = 0.1;
-
 	this.boundary = this.options.boundary || this.viewer.viewport.getBounds();
 };
 
 $.AreaSelector.prototype = {
 
-	pressHandler: function(event) {
-		if(this.dragging) return;
-		this.dragStart = this.viewer.viewport.pointFromPixel(event.position);
-		if(_insideRect(this.dragStart, this.rect)){
-			this.dragging = true;
-			this.panVerticalOriginal = this.viewer.panVertical;
-			this.panHorizontalOriginal = this.viewer.panHorizontal;
-			this.viewer.panVertical = false;
-			this.viewer.panHorizontal = false;
-			this.viewer.gestureSettingsTouch.flickEnabled = false;
-			this.dragStartOffset = this.dragStart.minus(this.rect.getTopLeft());
+	/**
+	 * Create area selector dom element
+	 */
+	_createAreaSelectorElement: function() {
+		var el = document.createElement("div");
+		el.className = "openseadragon-areaselector";
+
+		el.style.cursor = "move";
+		el.style.position = "relative";
+
+		//TODO: allow customising style
+		el.style.border = "2px dashed #2CFC0E";
+
+		this.element = el;
+	},
+
+	/**
+	 * Create resize handles
+	 * Attach, and position accordingly, relative to area selector.
+	 */
+	_createResizeHandles: function() {
+
+		this.handles = this.heandles || {};
+
+		var offset = "-17px";
+		var size = "20px";
+
+		//handle locations and sizes
+		var hlocs = {
+			"n": {w:size, h:size, t:offset, l:"50%", c:"ns"},
+			"e": {w:size, h:size, t:"50%", r:offset, c:"ew"},
+			"s": {w:size, h:size, b:offset, r:"50%", c:"ns"},
+			"w": {w:size, h:size, b:"50%", l:offset, c:"ew"},
+			"se": {w:size, h:size, b:offset, r:offset, c:"nwse"},
+			"sw": {w:size, h:size, b:offset, l:offset, c:"nesw"},
+			"ne": {w:size, h:size, t:offset, r:offset, c:"nesw"},
+			"nw": {w:size, h:size, t:offset, l:offset, c:"nwse"}
+		};
+
+		for(var l in hlocs){
+			var el = document.createElement("div");
+			var cname = l+"-resize";
+			el.className = "openseadragon-areaselector-handle handle-"+cname;
+			el.style.position = "absolute";
+			el.style.width = hlocs[l].w;
+			el.style.height = hlocs[l].h;
+			if(hlocs[l].t !== undefined) {
+				el.style.top = hlocs[l].t;
+			}
+			if(hlocs[l].b !== undefined) {
+				el.style.bottom = hlocs[l].b;
+			}
+			if(hlocs[l].l !== undefined) {
+				el.style.left = hlocs[l].l;
+			}
+			if(hlocs[l].r !== undefined) {
+				el.style.right = hlocs[l].r;
+			}
+			el.style.cursor = hlocs[l].c+"-resize";
+
+			//TODO: allow customising style
+			el.style.backgroundColor = "#2CFC0E";
+			el.style.borderRadius = "50%";
+			
+			this.handles[l] = {
+				element: el,
+				dir: l
+			};
+
+			this.element.appendChild(el);
 		}
 	},
 
-	dragHandler: function(event) {
-		if(!this.dragging) return;
+	/**
+	 * Handle cavnvas mousedown event
+	 */
+	pressHandler: function(event) {
+		if(this.dragging || this.resizing) return;
 
+		this.dragStart = this.viewer.viewport.pointFromPixel(event.position);
+
+		//look for clicked handle
+		var handle;
+		for(var h in this.handles){
+			if(event.originalEvent.target === this.handles[h].element){
+				handle = this.handles[h];
+			}
+		}
+		if(handle){
+			this.resizing = true;
+			this.currentHandle = handle;
+			this.dragRectStart = this.dragStart.minus(this.rect.getTopLeft());
+			this.rectStart = this.rect.clone();
+			this.disableViewerPan();
+		}else if(_insideRect(this.dragStart, this.rect)){
+			this.dragging = true;
+			this.dragStart = this.viewer.viewport.pointFromPixel(event.position);
+			this.dragRectStart = this.dragStart.minus(this.rect.getTopLeft());
+			this.disableViewerPan();
+		}
+	},
+
+	/**
+	 * Update postion / size, based on current dragging
+	 * of mouse.
+	 */
+	dragHandler: function(event) {
+		if(!this.dragging && !this.resizing) return;
+			
 		var dragPos = this.viewer.viewport.pointFromPixel(
 			new $.Point(event.position.x,event.position.y)
 		);
-
-		this.rect.x = dragPos.x - this.dragStartOffset.x;
-		this.rect.y = dragPos.y - this.dragStartOffset.y;
+		if(this.resizing){
+			var delta = dragPos.minus(this.dragStart),
+				trigger = this._change[this.currentHandle.dir],
+				data = trigger.apply(this,[event, delta.x, delta.y]);
+			for(var d in data){
+				this.rect[d] = data[d];
+			}
+		}else if(this.dragging){
+			this.rect.x = dragPos.x - this.dragRectStart.x;
+			this.rect.y = dragPos.y - this.dragRectStart.y;
+		}
 
 		this.respectBoundary();
-
 		//this.snapToGrid();
 
 		//update position
@@ -70,15 +166,44 @@ $.AreaSelector.prototype = {
 		);
 	},
 
+	/**
+	 * End dragging / resizing
+	 */
 	dragEndHandler: function() {
-		if(!this.dragging) return;
-		
-		this.dragging = false;
-		this.viewer.panVertical = this.panVerticalOriginal;
-		this.viewer.panHorizontal = this.panHorizontalOriginal;
-		this.viewer.gestureSettingsTouch.flickEnabled = true;
+		if(!this.dragging && !this.resizing) return;
+		if(this.resizing){
+			this.currentHandle = null;
+			this.resizing = false;
+		}else if(this.dragging){
+			this.dragging = false;
+		}
+		this.enableViewerPan();
 	},
 
+	/**
+	 * Disable some elements of the viewer
+	 */
+	disableViewerPan: function() {
+		this.panVerticalOriginal = this.viewer.panVertical;
+		this.panHorizontalOriginal = this.viewer.panHorizontal;
+		this.flickOriginal = this.viewer.gestureSettingsTouch.flickEnabled
+		this.viewer.panVertical = false;
+		this.viewer.panHorizontal = false;
+		this.viewer.gestureSettingsTouch.flickEnabled = false;
+	},
+
+	/**
+	 * Renenable previously disabled elements.
+	 */
+	enableViewerPan: function() {
+		this.viewer.panVertical = this.panVerticalOriginal;
+		this.viewer.panHorizontal = this.panHorizontalOriginal;
+		this.viewer.gestureSettingsTouch.flickEnabled = this.flickOriginal;
+	},
+
+	/**
+	 * Snap the area selector to a given grid
+	 */
 	snapToGrid: function() {
 		//TODO: allow custom grid width/height
 		this.rect.x = Math.floor(this.rect.x * 10) / 10;
@@ -86,13 +211,21 @@ $.AreaSelector.prototype = {
 	},
 
 	/**
-	 * Constrains the area selector to the boundary defined in options.
+	 * Constrain the area selector to the boundary defined in options.
 	 */
 	respectBoundary: function() {
 		if(!this.boundary){
 			return;
 		}
 		var b = this.boundary;
+		//constrain size
+		if(this.rect.width > b.width){
+			this.rect.width = b.width;
+		}
+		if(this.rect.height > b.height){
+			this.rect.height = b.height;
+		}
+		//constrain position
 		if(this.rect.x < b.x){
 			this.rect.x = b.x;
 		}else if(this.rect.x + this.rect.width > b.x + b.width){
@@ -102,6 +235,43 @@ $.AreaSelector.prototype = {
 			this.rect.y = b.y;
 		}else if(this.rect.y + this.rect.height > b.y + b.height){
 			this.rect.y = b.y + b.height - this.rect.height;
+		}
+	},
+	
+	/**
+	 * Collection of functions for appropriately updating
+	 * size/position, based on current handle
+	 */
+	_change: {
+		e: function(event, dx) {
+			return { width: this.rectStart.width + dx };
+		},
+		w: function(event, dx) {
+			var rs = this.rectStart;
+			return { x: rs.x + dx, width: rs.width - dx };
+		},
+		n: function(event, dx, dy) {
+			var rs = this.rectStart;
+			return { y: rs.y + dy, height: rs.height - dy };
+		},
+		s: function(event, dx, dy) {
+			return { height: this.rectStart.height + dy };
+		},
+		se: function(event, dx, dy) {
+			return $.extend(this._change.s.apply(this, arguments),
+				this._change.e.apply(this, [ event, dx, dy ]));
+		},
+		sw: function(event, dx, dy) {
+			return $.extend(this._change.s.apply(this, arguments),
+				this._change.w.apply(this, [ event, dx, dy ]));
+		},
+		ne: function(event, dx, dy) {
+			return $.extend(this._change.n.apply(this, arguments),
+				this._change.e.apply(this, [ event, dx, dy ]));
+		},
+		nw: function(event, dx, dy) {
+			return $.extend(this._change.n.apply(this, arguments),
+				this._change.w.apply(this, [ event, dx, dy ]));
 		}
 	}
 
@@ -116,74 +286,6 @@ function _insideRect(point, rect) {
 }
 
 /**
- * Create area selector dom element
- */
-function _createAreaSelectorElement(){
-	var el = document.createElement("div");
-	el.className = "openseadragon-areaselector";
-
-	el.style.cursor = "move";
-	el.style.position = "relative";
-
-	//TODO: allow customising style
-	el.style.border = "2px dashed #2CFC0E";
-
-	return el;
-}
-
-/**
- * Create resize handles
- * Attach, and position accordingly, relative to area selector.
- */
-function _createResizeHandles(areaselector) {
-
-	areaselector.handles = areaselector.heandles || {};
-
-	var offset = "-7px";
-	var size = "10px";
-
-	//handle locations and sizes
-	var hlocs = {
-		"n": {w:size, h:size, t:offset, l:"50%", c:"ns"},
-		"e": {w:size, h:size, t:"50%", r:offset, c:"ew"},
-		"s": {w:size, h:size, b:offset, r:"50%", c:"ns"},
-		"w": {w:size, h:size, b:"50%", l:offset, c:"ew"},
-		"se": {w:size, h:size, b:offset, r:offset, c:"nwse"},
-		"sw": {w:size, h:size, b:offset, l:offset, c:"nesw"},
-		"ne": {w:size, h:size, t:offset, r:offset, c:"nesw"},
-		"nw": {w:size, h:size, t:offset, l:offset, c:"nwse"}
-	};
-
-	for(var l in hlocs){
-		var el = document.createElement("div");
-		var cname = l+"-resize";
-		el.className = "openseadragon-areaselector-handle handle-"+cname;
-		el.style.position = "absolute";
-		el.style.width = hlocs[l].w;
-		el.style.height = hlocs[l].h;
-		if(hlocs[l].t !== undefined) {
-			el.style.top = hlocs[l].t;
-		}
-		if(hlocs[l].b !== undefined) {
-			el.style.bottom = hlocs[l].b;
-		}
-		if(hlocs[l].l !== undefined) {
-			el.style.left = hlocs[l].l;
-		}
-		if(hlocs[l].r !== undefined) {
-			el.style.right = hlocs[l].r;
-		}
-		el.style.cursor = hlocs[l].c+"-resize";
-
-		//TODO: allow customising style
-		el.style.backgroundColor = "#2CFC0E";
-		el.style.borderRadius = "50%";
-		
-		areaselector.element.appendChild(el);
-	}
-}
-
-/**
  * Creates a new AreaSelector attached to the viewer.
  **/
 $.Viewer.prototype.activateAreaSelector = function(options) {
@@ -195,6 +297,5 @@ $.Viewer.prototype.activateAreaSelector = function(options) {
 
 	return this.areaSelector;
 };
-
 
 }( OpenSeadragon ));

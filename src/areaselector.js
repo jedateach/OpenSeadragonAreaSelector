@@ -2,31 +2,55 @@
 
 $.AreaSelector = function( options ) {
 
-	//TODO: implement proper options setting
-	this.options = options || {};
+	var self = this;
 
     if (!options.viewer) {
         throw new Error('A viewer must be specified.');
     }
-	this.viewer = options.viewer;
 
-	this._createAreaSelectorElement();
-	this._createResizeHandles();
+    //apply options to this
+	$.extend( true, this, {
+		//rect representing size/location of selector
+		rect: new $.Rect(0.45, 0.45, 0.1, 0.1),
+		boundary: options.viewer.viewport.getBounds(),
+		handleOffset: 10, //px
+		handleSize: 15, //px
+		grid: 0.01, //logical
+		borderWidth: 1
+	}, options );
 
-	//TODO: allow setting start size
-	this.rect = new $.Rect(0.45, 0.45, 0.1, 0.1);
+	this.gridX = this.gridX || this.grid;
+	this.gridY = this.gridY || this.grid;
+
+	this.element = this.makeSelectorElement();
+	this.handles = this.makeResizeHandles();
+
+	//function to offset by border width
+	var draw = function(position, size, element ){
+		var style = this.style;
+		var border = self.borderWidth;
+		//offset position by border
+		style.left     = position.x - border + "px";
+        style.top      = position.y - border + "px";
+        style.position = "absolute";
+        style.display  = 'block';
+        if ( this.scales ) {
+            style.width  = size.x + "px";
+            style.height = size.y + "px";
+        }
+	};
 
 	this.viewer.addOverlay(
 		this.element,
 		this.rect,
-		$.OverlayPlacement.CENTER
+		$.OverlayPlacement.CENTER,
+		draw		
 	);
 
+	//event handling
 	this.viewer.addHandler('canvas-press', $.delegate(this, this.pressHandler));
 	this.viewer.addHandler('canvas-drag', $.delegate(this, this.dragHandler));
 	this.viewer.addHandler('canvas-drag-end', $.delegate(this, this.dragEndHandler));
-
-	this.boundary = this.options.boundary || this.viewer.viewport.getBounds();
 };
 
 $.AreaSelector.prototype = {
@@ -34,30 +58,26 @@ $.AreaSelector.prototype = {
 	/**
 	 * Create area selector dom element
 	 */
-	_createAreaSelectorElement: function() {
+	makeSelectorElement: function() {
 		var el = document.createElement("div");
 		el.className = "openseadragon-areaselector";
-
-		el.style.cursor = "move";
-		el.style.position = "relative";
-
 		//TODO: allow customising style
-		el.style.border = "2px dashed #2CFC0E";
+		el.style.cursor = "move";
+		el.style.borderWidth = this.borderWidth+"px";
+		el.style.borderStyle = "dashed";
+		//el.style.borderColor = "#2CFC0E";
 
-		this.element = el;
+		return el;
 	},
 
 	/**
 	 * Create resize handles
 	 * Attach, and position accordingly, relative to area selector.
 	 */
-	_createResizeHandles: function() {
-
-		this.handles = this.heandles || {};
-
-		var offset = "-17px";
-		var size = "20px";
-
+	makeResizeHandles: function() {
+		var handles = {},
+			offset = "-"+this.handleOffset+"px",
+			size = this.handleSize+"px";
 		//handle locations and sizes
 		var hlocs = {
 			"n": {w:size, h:size, t:offset, l:"50%", c:"ns"},
@@ -69,7 +89,6 @@ $.AreaSelector.prototype = {
 			"ne": {w:size, h:size, t:offset, r:offset, c:"nesw"},
 			"nw": {w:size, h:size, t:offset, l:offset, c:"nwse"}
 		};
-
 		for(var l in hlocs){
 			var el = document.createElement("div");
 			var cname = l+"-resize";
@@ -92,16 +111,20 @@ $.AreaSelector.prototype = {
 			el.style.cursor = hlocs[l].c+"-resize";
 
 			//TODO: allow customising style
-			el.style.backgroundColor = "#2CFC0E";
+			el.style.backgroundColor = "#FFF";
 			el.style.borderRadius = "50%";
+			el.style.borderWidth = "1px";
+			el.style.borderStyle = "solid";
 			
-			this.handles[l] = {
+			handles[l] = {
 				element: el,
 				dir: l
 			};
 
 			this.element.appendChild(el);
 		}
+
+		return handles;
 	},
 
 	/**
@@ -111,7 +134,6 @@ $.AreaSelector.prototype = {
 		if(this.dragging || this.resizing) return;
 
 		this.dragStart = this.viewer.viewport.pointFromPixel(event.position);
-
 		//look for clicked handle
 		var handle;
 		for(var h in this.handles){
@@ -155,9 +177,9 @@ $.AreaSelector.prototype = {
 			this.rect.y = dragPos.y - this.dragRectStart.y;
 		}
 
+		this.snapToGrid();
 		this.respectBoundary();
-		//this.snapToGrid();
-
+		
 		//update position
 		this.viewer.updateOverlay(
 			this.element,
@@ -193,7 +215,7 @@ $.AreaSelector.prototype = {
 	},
 
 	/**
-	 * Renenable previously disabled elements.
+	 * Re-enable previously disabled elements.
 	 */
 	enableViewerPan: function() {
 		this.viewer.panVertical = this.panVerticalOriginal;
@@ -205,9 +227,19 @@ $.AreaSelector.prototype = {
 	 * Snap the area selector to a given grid
 	 */
 	snapToGrid: function() {
+		var gridX = 1/this.gridX;
+		var gridY = 1/this.gridY;
+
 		//TODO: allow custom grid width/height
-		this.rect.x = Math.floor(this.rect.x * 10) / 10;
-		this.rect.y = Math.floor(this.rect.y * 10) / 10;
+		this.rect.x = Math.floor(this.rect.x * gridX) / gridX;
+		this.rect.y = Math.floor(this.rect.y * gridY) / gridY;
+		this.rect.width = Math.floor(this.rect.width * gridX) / gridX;
+		this.rect.height = Math.floor(this.rect.height * gridY) / gridY;
+
+		if(this.rect.width < this.gridX)
+			this.rect.width = this.gridX;
+		if(this.rect.height < this.gridY)
+			this.rect.height = this.gridY;
 	},
 
 	/**

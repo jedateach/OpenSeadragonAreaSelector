@@ -58,18 +58,24 @@ $.AreaSelector = function( options ) {
 
 $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 
+	/**
+	 * Show the selector
+	 */
 	show: function() {
 		this.visible = true;
 		this.redraw();
 	},
 
+	/**
+	 * Hide the selector
+	 */
 	hide: function() {
 		this.visible = false;
 		this.redraw();
 	},
 
 	/**
-	 * Create area selector dom element
+	 * Create area selector DOM element
 	 */
 	makeSelectorElement: function() {
 		var el = document.createElement("div");
@@ -207,6 +213,9 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 		this.enableViewerPan();
 	},
 
+	/**
+	 * Redraw the overlay element
+	 */
 	redraw: function() {
 		//TODO: only redraw if location or size are different
 		this.viewer.updateOverlay(
@@ -217,6 +226,10 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 		this.raiseEvent( 'redraw');
 	},
 
+	/**
+	 * Move the selector to the given rect location
+	 * @param OpenSeadragon.Rect rect
+	 */
 	setLocation: function(rect) {
 		this.rect = rect;
 		this.redraw();

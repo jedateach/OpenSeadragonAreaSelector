@@ -13,7 +13,7 @@ $.AreaSelector = function( options ) {
 		boundary: options.viewer.viewport.getBounds(),
 		handleOffset: 10, //px
 		handleSize: 15, //px
-		grid: 0.01, //logical
+		grid: null, //logical
 		borderWidth: 1,
 		visible: true,
 		zIndex: 100
@@ -239,19 +239,22 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 	 * Snap the area selector to a given grid
 	 */
 	snapToGrid: function() {
-		var gridX = 1/this.gridX;
-		var gridY = 1/this.gridY;
-
-		//TODO: allow custom grid width/height
-		this.rect.x = Math.floor(this.rect.x * gridX) / gridX;
-		this.rect.y = Math.floor(this.rect.y * gridY) / gridY;
-		this.rect.width = Math.floor(this.rect.width * gridX) / gridX;
-		this.rect.height = Math.floor(this.rect.height * gridY) / gridY;
-
-		if(this.rect.width < this.gridX)
-			this.rect.width = this.gridX;
-		if(this.rect.height < this.gridY)
-			this.rect.height = this.gridY;
+		if(this.gridX){
+			var gridX = 1/this.gridX;
+			this.rect.x = Math.floor(this.rect.x * gridX) / gridX;
+			this.rect.width = Math.floor(this.rect.width * gridX) / gridX;
+			if(this.rect.width < this.gridX){
+				this.rect.width = this.gridX;
+			}
+		}
+		if(this.gridY){
+			var gridY = 1/this.gridY;
+			this.rect.y = Math.floor(this.rect.y * gridY) / gridY;
+			this.rect.height = Math.floor(this.rect.height * gridY) / gridY;
+			if(this.rect.height < this.gridY){
+				this.rect.height = this.gridY;
+			}
+		}
 	},
 
 	/**

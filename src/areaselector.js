@@ -5,7 +5,6 @@ $.AreaSelector = function( options ) {
     if (!options.viewer) {
         throw new Error('A viewer must be specified.');
     }
-
     //apply options to this
 	$.extend( true, this, {
 		//rect representing size/location of selector
@@ -18,7 +17,6 @@ $.AreaSelector = function( options ) {
 		visible: true,
 		zIndex: 100
 	}, options );
-
     //Inherit some behaviors and properties
     $.EventSource.call( this );
 
@@ -26,7 +24,6 @@ $.AreaSelector = function( options ) {
 	this.gridY = this.gridY || this.grid;
 	this.element = this.makeSelectorElement();
 	this.handles = this.makeResizeHandles();
-
 	//function to offset by border width
 	var draw = function(position, size, element ){
 		var style = this.style;
@@ -42,7 +39,6 @@ $.AreaSelector = function( options ) {
             style.height = size.y + "px";
         }
 	};
-
 	//add overlay to viewer
 	this.viewer.addOverlay(
 		this.element,
@@ -126,18 +122,15 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 				el.style.right = hlocs[l].r;
 			}
 			el.style.cursor = hlocs[l].c+"-resize";
-
 			//TODO: allow customising style
 			el.style.backgroundColor = "#FFF";
 			el.style.borderRadius = "50%";
 			el.style.borderWidth = "1px";
 			el.style.borderStyle = "solid";
-			
 			handles[l] = {
 				element: el,
 				dir: l
 			};
-
 			this.element.appendChild(el);
 		}
 
@@ -149,7 +142,6 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 	 */
 	pressHandler: function(event) {
 		if(this.dragging || this.resizing) return;
-
 		this.dragStart = this.viewer.viewport.pointFromPixel(event.position);
 		//look for clicked handle
 		var handle;
@@ -178,7 +170,6 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 	 */
 	dragHandler: function(event) {
 		if(!this.dragging && !this.resizing) return;
-			
 		var dragPos = this.viewer.viewport.pointFromPixel(
 			new $.Point(event.position.x,event.position.y)
 		);
@@ -193,10 +184,7 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 			this.rect.x = dragPos.x - this.dragRectStart.x;
 			this.rect.y = dragPos.y - this.dragRectStart.y;
 		}
-		this.snapToGrid();
-		this.respectBoundary();
-		
-		this.redraw();
+		this.setLocation(this.rect);
 	},
 
 	/**
@@ -214,24 +202,13 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 	},
 
 	/**
-	 * Redraw the overlay element
-	 */
-	redraw: function() {
-		//TODO: only redraw if location or size are different
-		this.viewer.updateOverlay(
-			this.element,
-			this.rect,
-			$.OverlayPlacement.TOP_LEFT
-		);
-		this.raiseEvent( 'redraw');
-	},
-
-	/**
 	 * Move the selector to the given rect location
 	 * @param OpenSeadragon.Rect rect
 	 */
 	setLocation: function(rect) {
 		this.rect = rect;
+		this.snapToGrid();
+		this.respectBoundary();
 		this.redraw();
 	},
 
@@ -285,6 +262,19 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 		}else if(this.rect.y + this.rect.height > b.y + b.height){
 			this.rect.y = b.y + b.height - this.rect.height;
 		}
+	},
+
+	/**
+	 * Redraw the overlay element
+	 */
+	redraw: function() {
+		//TODO: only redraw if location or size are different
+		this.viewer.updateOverlay(
+			this.element,
+			this.rect,
+			$.OverlayPlacement.TOP_LEFT
+		);
+		this.raiseEvent( 'redraw');
 	},
 
 	/**

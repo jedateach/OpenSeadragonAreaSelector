@@ -241,16 +241,18 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 	snapToGrid: function() {
 		if(this.gridX){
 			var gridX = 1/this.gridX;
-			this.rect.x = Math.floor(this.rect.x * gridX) / gridX;
-			this.rect.width = Math.floor(this.rect.width * gridX) / gridX;
+			this.rect.x = Math.round(this.rect.x * gridX) / gridX;
+			this.rect.width = Math.round(this.rect.width * gridX) / gridX;
+			//keep the size at least as big as the grid
 			if(this.rect.width < this.gridX){
 				this.rect.width = this.gridX;
 			}
 		}
 		if(this.gridY){
 			var gridY = 1/this.gridY;
-			this.rect.y = Math.floor(this.rect.y * gridY) / gridY;
-			this.rect.height = Math.floor(this.rect.height * gridY) / gridY;
+			this.rect.y = Math.round(this.rect.y * gridY) / gridY;
+			this.rect.height = Math.round(this.rect.height * gridY) / gridY;
+			//keep the size at least as big as the grid
 			if(this.rect.height < this.gridY){
 				this.rect.height = this.gridY;
 			}

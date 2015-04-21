@@ -1,9 +1,7 @@
 (function( $ ){
 
 $.AreaSelector = function( options ) {
-
 	var self = this;
-
     if (!options.viewer) {
         throw new Error('A viewer must be specified.');
     }
@@ -16,12 +14,16 @@ $.AreaSelector = function( options ) {
 		handleOffset: 10, //px
 		handleSize: 15, //px
 		grid: 0.01, //logical
-		borderWidth: 1
+		borderWidth: 1,
+		visible: true,
+		zIndex: 100
 	}, options );
+
+    //Inherit some behaviors and properties
+    $.EventSource.call( this );
 
 	this.gridX = this.gridX || this.grid;
 	this.gridY = this.gridY || this.grid;
-
 	this.element = this.makeSelectorElement();
 	this.handles = this.makeResizeHandles();
 
@@ -33,27 +35,38 @@ $.AreaSelector = function( options ) {
 		style.left     = position.x - border + "px";
         style.top      = position.y - border + "px";
         style.position = "absolute";
-        style.display  = 'block';
+        style.display  = self.visible ? 'block' : 'none';
+        style.zIndex = ""+self.zIndex;
         if ( this.scales ) {
             style.width  = size.x + "px";
             style.height = size.y + "px";
         }
 	};
 
+	//add overlay to viewer
 	this.viewer.addOverlay(
 		this.element,
 		this.rect,
 		$.OverlayPlacement.CENTER,
 		draw		
 	);
-
 	//event handling
 	this.viewer.addHandler('canvas-press', $.delegate(this, this.pressHandler));
 	this.viewer.addHandler('canvas-drag', $.delegate(this, this.dragHandler));
 	this.viewer.addHandler('canvas-drag-end', $.delegate(this, this.dragEndHandler));
 };
 
-$.AreaSelector.prototype = {
+$.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
+
+	show: function() {
+		this.visible = true;
+		this.redraw();
+	},
+
+	hide: function() {
+		this.visible = false;
+		this.redraw();
+	},
 
 	/**
 	 * Create area selector dom element
@@ -61,11 +74,9 @@ $.AreaSelector.prototype = {
 	makeSelectorElement: function() {
 		var el = document.createElement("div");
 		el.className = "openseadragon-areaselector";
-		//TODO: allow customising style
 		el.style.cursor = "move";
 		el.style.borderWidth = this.borderWidth+"px";
 		el.style.borderStyle = "dashed";
-		//el.style.borderColor = "#2CFC0E";
 
 		return el;
 	},
@@ -176,16 +187,10 @@ $.AreaSelector.prototype = {
 			this.rect.x = dragPos.x - this.dragRectStart.x;
 			this.rect.y = dragPos.y - this.dragRectStart.y;
 		}
-
 		this.snapToGrid();
 		this.respectBoundary();
 		
-		//update position
-		this.viewer.updateOverlay(
-			this.element,
-			this.rect,
-			$.OverlayPlacement.TOP_LEFT
-		);
+		this.redraw();
 	},
 
 	/**
@@ -202,25 +207,19 @@ $.AreaSelector.prototype = {
 		this.enableViewerPan();
 	},
 
-	/**
-	 * Disable some elements of the viewer
-	 */
-	disableViewerPan: function() {
-		this.panVerticalOriginal = this.viewer.panVertical;
-		this.panHorizontalOriginal = this.viewer.panHorizontal;
-		this.flickOriginal = this.viewer.gestureSettingsTouch.flickEnabled
-		this.viewer.panVertical = false;
-		this.viewer.panHorizontal = false;
-		this.viewer.gestureSettingsTouch.flickEnabled = false;
+	redraw: function() {
+		//TODO: only redraw if location or size are different
+		this.viewer.updateOverlay(
+			this.element,
+			this.rect,
+			$.OverlayPlacement.TOP_LEFT
+		);
+		this.raiseEvent( 'redraw');
 	},
 
-	/**
-	 * Re-enable previously disabled elements.
-	 */
-	enableViewerPan: function() {
-		this.viewer.panVertical = this.panVerticalOriginal;
-		this.viewer.panHorizontal = this.panHorizontalOriginal;
-		this.viewer.gestureSettingsTouch.flickEnabled = this.flickOriginal;
+	setLocation: function(rect) {
+		this.rect = rect;
+		this.redraw();
 	},
 
 	/**
@@ -269,10 +268,32 @@ $.AreaSelector.prototype = {
 			this.rect.y = b.y + b.height - this.rect.height;
 		}
 	},
+
+	/**
+	 * Disable some elements of the viewer
+	 */
+	disableViewerPan: function() {
+		this.panVerticalOriginal = this.viewer.panVertical;
+		this.panHorizontalOriginal = this.viewer.panHorizontal;
+		this.flickOriginal = this.viewer.gestureSettingsTouch.flickEnabled
+		this.viewer.panVertical = false;
+		this.viewer.panHorizontal = false;
+		this.viewer.gestureSettingsTouch.flickEnabled = false;
+	},
+
+	/**
+	 * Re-enable previously disabled elements.
+	 */
+	enableViewerPan: function() {
+		this.viewer.panVertical = this.panVerticalOriginal;
+		this.viewer.panHorizontal = this.panHorizontalOriginal;
+		this.viewer.gestureSettingsTouch.flickEnabled = this.flickOriginal;
+	},
 	
 	/**
 	 * Collection of functions for appropriately updating
 	 * size/position, based on current handle
+	 * borrowed from jqueryUI resizable.js
 	 */
 	_change: {
 		e: function(event, dx) {
@@ -307,7 +328,7 @@ $.AreaSelector.prototype = {
 		}
 	}
 
-};
+});
 
 /**
 * Is a point inside a rectangle

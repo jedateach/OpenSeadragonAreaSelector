@@ -1,6 +1,8 @@
 # OpenSeaDragonAreaSelector
 
-This OpenSeaDragon plugin introduces a new feature for selecting, moving and resizing areas within the viewer.
+This OpenSeaDragon plugin introduces a new feature for selecting, moving and resizing selection areas within the viewer.
+
+[Demo](http://jedateach.github.io/OpenSeadragonAreaSelector/demo/)
 
 ![osdselector](https://cloud.githubusercontent.com/assets/1356335/7264166/e7f94190-e8dc-11e4-88f9-8a62e5a1aefc.gif)
 

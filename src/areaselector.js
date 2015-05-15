@@ -212,6 +212,15 @@ $.extend( $.AreaSelector.prototype, $.EventSource.prototype, {
 		this.redraw();
 	},
 
+
+	/**
+	 * Get the current rect (location)
+	 * @return OpenSeadragon.Rect rect
+	 */
+	getLocation: function(rect) {
+		return this.rect;
+	},
+
 	/**
 	 * Snap the area selector to a given grid
 	 */

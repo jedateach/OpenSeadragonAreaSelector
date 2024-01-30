@@ -7,6 +7,8 @@
   ],
   "author": "Jeremy Shipman",
   "license": "MIT",
+  "repository": "https://github.com/jedateach/OpenSeadragonAreaSelector",
+  "homepage": "http://jedateach.github.io/OpenSeadragonAreaSelector/demo",
   "files": [
     "src/*"
   ],

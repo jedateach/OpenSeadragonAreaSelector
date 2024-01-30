@@ -1,6 +1,10 @@
 {
-  "name": "OpenSeadragonAreaSelector",
-  "version": "0.1.0",
+  "name": "openseadragon-areaselector",
+  "version": "0.2.0",
+  "keywords": [
+    "openseadragon",
+    "extension"
+  ],
   "description": "OpenSeadragon plugin which allows selecting areas on an image.",
   "devDependencies": {
     "grunt": "~0.4.1",

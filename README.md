@@ -40,4 +40,4 @@ Specify `gridWidth` and/or `gridHeight` to have the area selector snap.
 
 ### Boundary
 
-Limit where the area slector can be, by defining a `boundary`` rect.
+Limit where the area slector can be, by defining a `boundary` rect.

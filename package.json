@@ -1,6 +1,17 @@
 {
-  "name": "OpenSeadragonAreaSelector",
-  "version": "0.1.0",
+  "name": "openseadragon-areaselector",
+  "version": "0.2.1",
+  "keywords": [
+    "openseadragon",
+    "extension"
+  ],
+  "author": "Jeremy Shipman",
+  "license": "MIT",
+  "repository": "https://github.com/jedateach/OpenSeadragonAreaSelector",
+  "homepage": "http://jedateach.github.io/OpenSeadragonAreaSelector/demo",
+  "files": [
+    "src/*"
+  ],
   "description": "OpenSeadragon plugin which allows selecting areas on an image.",
   "devDependencies": {
     "grunt": "~0.4.1",
